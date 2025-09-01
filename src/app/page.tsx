@@ -15,7 +15,6 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  // Default order is by firstName in ascending order
   const [orderInfo, setOrderInfo] = useState<Order>();
 
   const [paginationParameters, setPaginationParameters] = useState({
