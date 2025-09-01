@@ -1,91 +1,183 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { Table, Pagination, Tag } from "antd";
+import Search from "antd/lib/input/Search";
+import { useGetAdvocates } from "@/hooks/useGetAdvocates";
+import { AdvocatesInterface } from "@/db/schema";
+
+const { Column } = Table;
 
 export default function Home() {
-  const [advocates, setAdvocates] = useState([]);
-  const [filteredAdvocates, setFilteredAdvocates] = useState([]);
+  const [searchText, setSearchText] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  useEffect(() => {
-    console.log("fetching advocates...");
-    fetch("/api/advocates").then((response) => {
-      response.json().then((jsonResponse) => {
-        setAdvocates(jsonResponse.data);
-        setFilteredAdvocates(jsonResponse.data);
-      });
-    });
+  const { advocates, meta, loading, error } = useGetAdvocates({
+    search: searchText,
+    paginationParameters: {
+      page: currentPage,
+      pageSize: pageSize,
+    },
+  });
+
+  const handleSearch = useCallback((searchTerm: string) => {
+    setSearchText(searchTerm);
+    //let's reset to first page after searching
+    setCurrentPage(1);
   }, []);
 
-  const onChange = (e) => {
-    const searchTerm = e.target.value;
+  const debouncedSearch = useMemo(() => {
+    let timeoutId: NodeJS.Timeout;
+    return (searchTerm: string) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        handleSearch(searchTerm);
+      }, 500);
+    };
+  }, [handleSearch]);
 
-    document.getElementById("search-term").innerHTML = searchTerm;
-
-    console.log("filtering advocates...");
-    const filteredAdvocates = advocates.filter((advocate) => {
-      return (
-        advocate.firstName.includes(searchTerm) ||
-        advocate.lastName.includes(searchTerm) ||
-        advocate.city.includes(searchTerm) ||
-        advocate.degree.includes(searchTerm) ||
-        advocate.specialties.includes(searchTerm) ||
-        advocate.yearsOfExperience.includes(searchTerm)
-      );
-    });
-
-    setFilteredAdvocates(filteredAdvocates);
+  const handlePagination = (page: number, size: number) => {
+    setCurrentPage(page);
+    setPageSize(size);
   };
 
-  const onClick = () => {
-    console.log(advocates);
-    setFilteredAdvocates(advocates);
-  };
+  // Add unique keys to data source to prevent the unique key warning
+  const dataSource = advocates.map((advocate: AdvocatesInterface) => ({
+    ...advocate,
+    key: advocate.id,
+  }));
+
+  if (error) {
+    return (
+      <main style={{ margin: "24px" }}>
+        <h1>Error loading advocates</h1>
+        <p>Please try again later.</p>
+      </main>
+    );
+  }
+
+  function getFormattedPhoneNumber() {
+    return (phoneNumber: string) => {
+      // Format phone number for display
+      const formatted = phoneNumber?.toString();
+      if (formatted && formatted.length === 10) {
+        return `(${formatted.slice(0, 3)}) ${formatted.slice(
+          3,
+          6
+        )}-${formatted.slice(6)}`;
+      }
+      return formatted;
+    };
+  }
 
   return (
-    <main style={{ margin: "24px" }}>
-      <h1>Solace Advocates</h1>
-      <br />
-      <br />
-      <div>
-        <p>Search</p>
-        <p>
-          Searching for: <span id="search-term"></span>
-        </p>
-        <input style={{ border: "1px solid black" }} onChange={onChange} />
-        <button onClick={onClick}>Reset Search</button>
+    <main className="m-6">
+      <h1 className="mb-6">Solace Advocates</h1>
+
+      <div className="mb-6">
+        {searchText && (
+          <p className="mb-4 text-gray-600">
+            Searching for: <strong>{searchText}</strong>
+          </p>
+        )}
+
+        <Search
+          placeholder="Search by name, city, degree, specialties, or experience..."
+          allowClear
+          style={{ width: 400 }}
+          onChange={(e) => debouncedSearch(e.target.value)}
+          onSearch={debouncedSearch}
+        />
       </div>
-      <br />
-      <br />
-      <table>
-        <thead>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>City</th>
-          <th>Degree</th>
-          <th>Specialties</th>
-          <th>Years of Experience</th>
-          <th>Phone Number</th>
-        </thead>
-        <tbody>
-          {filteredAdvocates.map((advocate) => {
-            return (
-              <tr>
-                <td>{advocate.firstName}</td>
-                <td>{advocate.lastName}</td>
-                <td>{advocate.city}</td>
-                <td>{advocate.degree}</td>
-                <td>
-                  {advocate.specialties.map((s) => (
-                    <div>{s}</div>
-                  ))}
-                </td>
-                <td>{advocate.yearsOfExperience}</td>
-                <td>{advocate.phoneNumber}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+
+      <Table
+        dataSource={dataSource}
+        loading={loading}
+        pagination={false}
+        scroll={{ x: 800 }}
+        style={{
+          border: "1px solid #f0f0f0",
+          borderRadius: "8px",
+          backgroundColor: "white",
+        }}
+      >
+        <Column
+          title="First Name"
+          dataIndex="firstName"
+          key="firstName"
+          sorter={(a, b) => a.firstName.localeCompare(b.firstName)}
+        />
+
+        <Column
+          title="Last Name"
+          dataIndex="lastName"
+          key="lastName"
+          sorter={(a, b) => a.lastName.localeCompare(b.lastName)}
+        />
+
+        <Column
+          title="City"
+          dataIndex="city"
+          key="city"
+          sorter={(a, b) => a.city.localeCompare(b.city)}
+        />
+
+        <Column
+          title="Degree"
+          dataIndex="degree"
+          key="degree"
+          sorter={(a, b) => a.degree.localeCompare(b.degree)}
+        />
+
+        <Column
+          title="Specialties"
+          dataIndex="specialties"
+          key="specialties"
+          render={(specialties) => (
+            <div className="flex flex-col gap-1">
+              {specialties?.map((specialty: string, index: number) => (
+                <Tag key={index} color="blue" className="w-fit">
+                  {specialty}
+                </Tag>
+              ))}
+            </div>
+          )}
+        />
+
+        <Column
+          title="Years of Experience"
+          dataIndex="yearsOfExperience"
+          key="yearsOfExperience"
+          sorter={(a, b) => a.yearsOfExperience - b.yearsOfExperience}
+          align="center"
+        />
+
+        <Column
+          title="Phone Number"
+          dataIndex="phoneNumber"
+          key="phoneNumber"
+          render={getFormattedPhoneNumber()}
+        />
+      </Table>
+
+      {meta.total > 0 && (
+        <Pagination
+          className="mt-6"
+          current={currentPage}
+          pageSize={pageSize}
+          total={meta.total}
+          showSizeChanger={true}
+          showQuickJumper={true}
+          showTotal={(total, range) =>
+            `${range[0]}-${range[1]} of ${total} advocates`
+          }
+          onChange={handlePagination}
+          onShowSizeChange={handlePagination}
+          pageSizeOptions={["10", "20", "50", "100"]}
+          style={{ marginTop: "16px", textAlign: "center" }}
+        />
+      )}
     </main>
   );
 }
