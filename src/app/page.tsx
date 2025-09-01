@@ -3,8 +3,10 @@
 import { useState, useMemo, useCallback } from "react";
 import { Table, Pagination, Tag } from "antd";
 import Search from "antd/lib/input/Search";
+import { SorterResult } from "antd/lib/table/interface";
 import { useGetAdvocates } from "@/hooks/useGetAdvocates";
 import { AdvocatesInterface } from "@/db/schema";
+import { Order, sortState } from "@/util/tableUtil";
 
 const { Column } = Table;
 
@@ -13,12 +15,18 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const { advocates, meta, loading, error } = useGetAdvocates({
+  // Default order is by firstName in ascending order
+  const [orderInfo, setOrderInfo] = useState<Order>();
+
+  const [paginationParameters, setPaginationParameters] = useState({
+    page: currentPage,
+    pageSize: pageSize,
+  });
+
+  const { advocates, meta, isLoading, error } = useGetAdvocates({
     search: searchText,
-    paginationParameters: {
-      page: currentPage,
-      pageSize: pageSize,
-    },
+    paginationParameters,
+    orderInfo,
   });
 
   const handleSearch = useCallback((searchTerm: string) => {
@@ -40,6 +48,20 @@ export default function Home() {
   const handlePagination = (page: number, size: number) => {
     setCurrentPage(page);
     setPageSize(size);
+    setPaginationParameters({ page, pageSize: size });
+  };
+
+  // Transform Ant Design sorter to Order parameters
+  const tableSorterToOrderParameters = (
+    sorterOrList: SorterResult<any> | SorterResult<any>[]
+  ) => {
+    const sorter = Array.isArray(sorterOrList) ? sorterOrList[0] : sorterOrList;
+    // If order is undefined, no order is set -> remove order parameters
+    if (sorter.column === undefined) {
+      setOrderInfo({ columnKey: undefined, order: undefined });
+    } else {
+      setOrderInfo({ columnKey: sorter.columnKey, order: sorter.order });
+    }
   };
 
   // Add unique keys to data source to prevent the unique key warning
@@ -50,7 +72,7 @@ export default function Home() {
 
   if (error) {
     return (
-      <main style={{ margin: "24px" }}>
+      <main className="m-6">
         <h1>Error loading advocates</h1>
         <p>Please try again later.</p>
       </main>
@@ -73,9 +95,9 @@ export default function Home() {
 
   return (
     <main className="m-6">
-      <h1 className="mb-6">Solace Advocates</h1>
+      <h1 className="m-6">Solace Advocates</h1>
 
-      <div className="mb-6">
+      <div className="m-6">
         {searchText && (
           <p className="mb-4 text-gray-600">
             Searching for: <strong>{searchText}</strong>
@@ -93,9 +115,12 @@ export default function Home() {
 
       <Table
         dataSource={dataSource}
-        loading={loading}
+        loading={isLoading}
         pagination={false}
         scroll={{ x: 800 }}
+        onChange={(_pagination, _filters, sorter, extra) =>
+          extra.action === "sort" ? tableSorterToOrderParameters(sorter) : null
+        }
         style={{
           border: "1px solid #f0f0f0",
           borderRadius: "8px",
@@ -106,28 +131,32 @@ export default function Home() {
           title="First Name"
           dataIndex="firstName"
           key="firstName"
-          sorter={(a, b) => a.firstName.localeCompare(b.firstName)}
+          sorter
+          defaultSortOrder={sortState(orderInfo, "firstName")}
         />
 
         <Column
           title="Last Name"
           dataIndex="lastName"
           key="lastName"
-          sorter={(a, b) => a.lastName.localeCompare(b.lastName)}
+          sorter
+          defaultSortOrder={sortState(orderInfo, "lastName")}
         />
 
         <Column
           title="City"
           dataIndex="city"
           key="city"
-          sorter={(a, b) => a.city.localeCompare(b.city)}
+          sorter
+          defaultSortOrder={sortState(orderInfo, "city")}
         />
 
         <Column
           title="Degree"
           dataIndex="degree"
           key="degree"
-          sorter={(a, b) => a.degree.localeCompare(b.degree)}
+          sorter
+          defaultSortOrder={sortState(orderInfo, "degree")}
         />
 
         <Column
@@ -149,7 +178,8 @@ export default function Home() {
           title="Years of Experience"
           dataIndex="yearsOfExperience"
           key="yearsOfExperience"
-          sorter={(a, b) => a.yearsOfExperience - b.yearsOfExperience}
+          sorter
+          defaultSortOrder={sortState(orderInfo, "yearsOfExperience")}
           align="center"
         />
 
