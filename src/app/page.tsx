@@ -93,10 +93,9 @@ export default function Home() {
   }
 
   return (
-    <main className="m-6">
-      <h1 className="m-6">Solace Advocates</h1>
-
-      <div className="m-6">
+    <main className="flex flex-col gap-6 p-6">
+      <h1>Solace Advocates</h1>
+      <div>
         {searchText && (
           <p className="mb-4 text-gray-600">
             Searching for: <strong>{searchText}</strong>
@@ -106,7 +105,7 @@ export default function Home() {
         <Search
           placeholder="Search by name, city, degree, specialties, or experience..."
           allowClear
-          style={{ width: 400 }}
+          className="w-96"
           onChange={(e) => debouncedSearch(e.target.value)}
           onSearch={debouncedSearch}
         />
@@ -120,11 +119,7 @@ export default function Home() {
         onChange={(_pagination, _filters, sorter, extra) =>
           extra.action === "sort" ? tableSorterToOrderParameters(sorter) : null
         }
-        style={{
-          border: "1px solid #f0f0f0",
-          borderRadius: "8px",
-          backgroundColor: "white",
-        }}
+        className="border border-gray-200 rounded-lg bg-white"
       >
         <Column
           title="First Name"
@@ -196,8 +191,6 @@ export default function Home() {
           current={currentPage}
           pageSize={pageSize}
           total={meta.total}
-          showSizeChanger={true}
-          showQuickJumper={true}
           showTotal={(total, range) =>
             `${range[0]}-${range[1]} of ${total} advocates`
           }
