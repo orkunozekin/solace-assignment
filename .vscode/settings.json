@@ -1,7 +1,0 @@
-{
-  "typescript.preferences.importModuleSpecifier": "non-relative",
-  "editor.codeActionsOnSave": {
-    "source.fixAll.eslint": "explicit"
-  },
-  "explorer.autoReveal": true
-}
