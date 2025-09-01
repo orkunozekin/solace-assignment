@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm";
+import { InferSelectModel, sql } from "drizzle-orm";
 import {
   pgTable,
   integer,
@@ -9,7 +9,7 @@ import {
   bigint,
 } from "drizzle-orm/pg-core";
 
-const advocates = pgTable("advocates", {
+export const advocates = pgTable("advocates", {
   id: serial("id").primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
@@ -21,4 +21,5 @@ const advocates = pgTable("advocates", {
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`),
 });
 
-export { advocates };
+export interface AdvocatesInterface
+  extends InferSelectModel<typeof advocates> {}
